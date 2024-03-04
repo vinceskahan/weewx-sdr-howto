@@ -1,6 +1,4 @@
 
-##############################################################################
-
 [SDR]
     # This section is for the software-defined radio driver.
    
@@ -59,9 +57,14 @@
         #   temperature.35.AmbientWH31BPacket': 5.5, 'humidity.35.AmbientWH31BPacket': 84.0, 'battery.35.AmbientWH31BPacket': 0
         #
         # so to map to the outside temperature elements.....
-        outTemp              = temperature.35.AmbientWH31BPacket
-        outHumidity          = humidity.35.AmbientWH31BPacket
-        outTempBatteryStatus = battery.35.AmbientWH31BPacket
+        #outTemp              = temperature.35.AmbientWH31BPacket
+        #outHumidity          = humidity.35.AmbientWH31BPacket
+        #outTempBatteryStatus = battery.35.AmbientWH31BPacket
+        outTemp              = temperature.35.FineOffsetWH32Packet
+        outHumidity          = humidity.35.FineOffsetWH32Packet
+        outTempBatteryStatus = battery.35.FineOffsetWH32Packet
+
+#2024-03-03T22:40:36.998650-08:00 nuc weewxd[31931]: INFO user.sdr: unmapped: {'dateTime': 1709534433, 'usUnits': 17, 'temperature.35.FineOffsetWH32Packet': 2.3, 'humidity.35.FineOffsetWH32Packet': 95.0, 'battery.35.FineOffsetWH32Packet': 1, 'channel.35.FineOffsetWH32Packet': None}
 
         soilMoist1 = soil_moisture_percent.001260.FOWH51Packet
  
