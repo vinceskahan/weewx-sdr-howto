@@ -77,7 +77,9 @@ weectl extension install -y https://github.com/matthewwall/weewx-sdr/archive/mas
 weectl extension list
 ```
 
-And verify the driver is installed....
+Note - about permissions - if you run "rtl-test" to validate your dongle works and you get 'permission denied', you likely need to add your user to a supplemental group such as 'dialout' or 'plugdev' or whatever you particular os requires to access USB devices.  In general on a raspberry pi the default 'pi' user is in group 'dialout' so this is not necessary.   If you do have permission denied for whatever user weewx is running as, you would fix it by "sudo usermod -aG dialout $USER" or the like.  The user would then need to likely log out/in (or run 'newgrp dialout') to be able then access the USB device.  Precise instructions are a bit hard to say here since every os differs.  Google helps.
+
+So lets verify the driver is installed....
 
 ```
 (weewx-venv) vince@nuc:~$ weectl extension list
