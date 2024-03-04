@@ -469,3 +469,4 @@ At this point your debug=1 logging is much more configurable.  You can suppress 
 
 Nice and clean.  No unmapped sensors.  No duplicate packet noise in the logs.  No unknown sensor models.  Call it done and release the victory beer(s) !!!!
 
+If you want to cut to the chase, the modified sdr.py has been submitted to upstream as https://github.com/matthewwall/weewx-sdr/pull/184 and the modified sdr.py and matching weewx.conf snippet are located here in this repo.
