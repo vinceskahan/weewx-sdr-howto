@@ -126,8 +126,6 @@ Open another window and do a "tail -f /var/log/weewx/weewx.log -n 200" and you s
 and the driver complaining about (a) unmapped known sensors and (b) punting trying to decipher unknown sensor models.
 
 ```
-
-```
 024-03-03T18:12:25.286568-08:00 nuc weewxd[17775]: INFO weewxd: Starting up weewx version 5.0.2
 2024-03-03T18:12:25.286685-08:00 nuc weewxd[17775]: DEBUG weewx.engine: Station does not support reading the time
 2024-03-03T18:12:25.286788-08:00 nuc weewxd[17775]: INFO weewx.engine: Using binding 'wx_binding' to database 'weewx.sdb'
