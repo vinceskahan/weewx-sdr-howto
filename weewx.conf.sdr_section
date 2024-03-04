@@ -24,7 +24,6 @@
 
     log_unknown_sensors  = True
     log_unmapped_sensors = True
-    #timestamp_match_threshhold = 3   # we see dups for all sensors
 
     log_packets            = False  # log mapped packets if debug > 0
     log_duplicate_readings = False  # suppress logging dups
