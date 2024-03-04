@@ -100,7 +100,7 @@ Saved old configuration file as /home/vince/weewx-data/weewx.conf.20240303175452
 
 Next edit weewx-data/weewx.conf to add some elements to the SDR stanza.
 
-Ignore the past two items for now.  We will later lightly patch sdr.py to make logging
+Ignore the last two items for now.  We will later lightly patch sdr.py to make logging
 a little more controllable.   Lets switch to the SDR driver and give it a try.
 
 ```
@@ -198,7 +198,7 @@ First lets work the soil moisture sensor. Consider the output from the logs abov
 #  unmapped: {'dateTime': 1709518369, 'usUnits': 16, 'soil_moisture_percent.001260.FOWH51Packet': 39.0, 'boost.001260.FOWH51Packet': 0.0, 'soil_moisture_raw.001260.FOWH51Packet': 217.0, 'freq1.001260.FOWH51Packet': None, 'freq2.001260.FOWH51Packet': None, 'battery_ok.001260.FOWH51Packet': 0.778, 'battery_mV.001260.FOWH51Packet': 1400.0, 'snr.001260.FOWH51Packet': None, 'rssi.001260.FOWH51Packet': None, 'noise.001260.FOWH51Packet': None}
 ```
 
-What's that mean ?   It meahs that we know its data elements and values and we have enough info to map it to the weewx db.  Lets map it to the soilMoist1 element.
+What's that mean ?   It means that we know its data elements and values and we have enough info to map it to the weewx db.  Lets map it to the soilMoist1 element.
 
 ```
     [[sensor_map]]
