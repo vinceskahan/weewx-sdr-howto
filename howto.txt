@@ -1,0 +1,741 @@
+
+#-----------------------------------------------------------
+# add sqlite3 which we'll need later
+#-----------------------------------------------------------
+
+sudo apt-get install -y sqlite3
+
+#-----------------------------------------------------------
+# install weewx per the debian weewx 5.0 quickstart
+#-----------------------------------------------------------
+
+sudo apt install -y wget gnupg
+wget -qO - https://weewx.com/keys.html | \
+     sudo gpg --dearmor --output /etc/apt/trusted.gpg.d/weewx.gpg
+echo "deb [arch=all] https://weewx.com/apt/python3 buster main" | \
+     sudo tee /etc/apt/sources.list.d/weewx.list
+sudo apt update
+sudo apt install weewx -y
+(and take the defaults)
+
+#-----------------------------------------------------------
+# verify it's running
+#-----------------------------------------------------------
+
+$ ps axu|grep wee
+weewx     1657  0.6  0.5  31044 22464 ?        Ss   16:35   0:00 python3 /usr/share/weewx/weewxd.py /etc/weewx/weewx.conf
+
+#-----------------------------------------------------------
+# install and configure rsyslog
+#-----------------------------------------------------------
+
+sudo apt-get install -y rsyslog
+sudo cp /etc/weewx/rsyslog.d/weewx.conf /etc/rsyslog.d/weewx.conf
+sudo systemctl restart rsyslog
+
+#-----------------------------------------------------------
+# verify weewx is logging there
+#-----------------------------------------------------------
+
+$ sudo systemctl restart weewx
+
+$ sudo tail -n 2  /var/log/weewx/weewx.log
+2024-03-04T16:40:25.185372-08:00 pi4jr weewxd[1744]: INFO weewx.manager: Daily summaries up to date
+2024-03-04T16:40:25.185634-08:00 pi4jr weewxd[1744]: INFO weewx.engine: Starting main packet loop.
+
+#-----------------------------------------------------------
+# at this point we can install rtl-433
+#-----------------------------------------------------------
+
+$ sudo apt-get install -y rtl-433
+
+#-----------------------------------------------------------
+# plug in your RTL-SDR dongle and look for it being found
+#-----------------------------------------------------------
+
+$ sudo dmesg
+[  681.143427] usb 1-1.1: new high-speed USB device number 3 using xhci_hcd
+[  681.255320] usb 1-1.1: New USB device found, idVendor=0bda, idProduct=2838, bcdDevice= 1.00
+[  681.255346] usb 1-1.1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[  681.255359] usb 1-1.1: Product: RTL2838UHIDIR
+[  681.255369] usb 1-1.1: Manufacturer: Realtek
+[  681.255413] usb 1-1.1: SerialNumber: 00000001
+[  681.421391] usb 1-1.1: dvb_usb_v2: found a 'Realtek RTL2832U reference design' in warm state
+[  681.477282] usb 1-1.1: dvb_usb_v2: will pass the complete MPEG2 transport stream to the software demuxer
+[  681.477311] dvbdev: DVB: registering new adapter (Realtek RTL2832U reference design)
+[  681.477318] usb 1-1.1: media controller created
+[  681.477849] dvbdev: dvb_create_media_entity: media entity 'dvb-demux' registered.
+[  681.494413] i2c i2c-22: Added multiplexed i2c bus 23
+[  681.494430] rtl2832 22-0010: Realtek RTL2832 successfully attached
+[  681.494461] usb 1-1.1: DVB: registering adapter 0 frontend 0 (Realtek RTL2832 (DVB-T))...
+[  681.494480] dvbdev: dvb_create_media_entity: media entity 'Realtek RTL2832 (DVB-T)' registered.
+[  681.508843] r820t 23-001a: creating new instance
+[  681.515743] r820t 23-001a: Rafael Micro r820t successfully identified, chip type: R820T
+[  681.525559] rtl2832_sdr rtl2832_sdr.2.auto: Registered as swradio0
+[  681.525574] rtl2832_sdr rtl2832_sdr.2.auto: Realtek RTL2832 SDR attached
+[  681.525578] rtl2832_sdr rtl2832_sdr.2.auto: SDR API is still slightly experimental and functionality changes may follow
+[  681.535707] Registered IR keymap rc-empty
+[  681.535789] rc rc2: Realtek RTL2832U reference design as /devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/rc/rc2
+[  681.535874] rc rc2: lirc_dev: driver dvb_usb_rtl28xxu registered at minor = 0, raw IR receiver, no transmitter
+[  681.535940] input: Realtek RTL2832U reference design as /devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/rc/rc2/input2
+[  681.536093] usb 1-1.1: dvb_usb_v2: schedule remote query interval to 200 msecs
+[  681.544684] usb 1-1.1: dvb_usb_v2: 'Realtek RTL2832U reference design' successfully initialized and connected
+[  681.544813] usbcore: registered new interface driver dvb_usb_rtl28xxu
+
+#-----------------------------------------------------------
+# test rtl-sdr by running rtl_433 for 2 seconds
+#-----------------------------------------------------------
+pi@pi4jr:~ $ rtl_433 -T 2
+rtl_433 version 22.11 (2022-11-19) inputs file rtl_tcp RTL-SDR SoapySDR
+Use -h for usage help and see https://triq.org/ for documentation.
+Trying conf file at "rtl_433.conf"...
+Trying conf file at "/home/pi/.config/rtl_433/rtl_433.conf"...
+Trying conf file at "/usr/local/etc/rtl_433/rtl_433.conf"...
+Trying conf file at "/etc/rtl_433/rtl_433.conf"...
+Registered 191 out of 223 device decoding protocols [ 1-4 8 11-12 15-17 19-23 25-26 29-36 38-60 63 67-71 73-100 102-105 108-116 119 121 124-128 130-149 151-161 163-168 170-175 177-197 199 201-215 217-223 ]
+Detached kernel driver
+Found Rafael Micro R820T tuner
+Exact sample rate is: 250000.000414 Hz
+[R82XX] PLL not locked!
+Sample rate set to 250000 S/s.
+Tuner gain set to Auto.
+Tuned to 433.920MHz.
+Allocating 15 zero-copy buffers
+baseband_demod_FM: low pass filter for 250000 Hz at cutoff 25000 Hz, 40.0 us
+Time expired, exiting!
+Reattached kernel driver
+
+#-----------------------------------------------------------
+# now listen for your sensors
+#
+# In this example, we use Ecowitt sensors:
+#  - these use 915M frequency so specify that
+#  - and specify output is in JSON format
+#  - and run for 120 seconds because we know that they
+#       transmit approximately every minute so run through
+#       hopefully two cycles of each sensor reporting
+#-----------------------------------------------------------
+
+pi@pi4jr:~ $ rtl_433 -f 915M -F json -T 120
+rtl_433 version 22.11 (2022-11-19) inputs file rtl_tcp RTL-SDR SoapySDR
+Use -h for usage help and see https://triq.org/ for documentation.
+Trying conf file at "rtl_433.conf"...
+Trying conf file at "/home/pi/.config/rtl_433/rtl_433.conf"...
+Trying conf file at "/usr/local/etc/rtl_433/rtl_433.conf"...
+Trying conf file at "/etc/rtl_433/rtl_433.conf"...
+
+New defaults active, use "-Y classic -s 250k" for the old defaults!
+
+Registered 191 out of 223 device decoding protocols [ 1-4 8 11-12 15-17 19-23 25-26 29-36 38-60 63 67-71 73-100 102-105 108-116 119 121 124-128 130-149 151-161 163-168 170-175 177-197 199 201-215 217-223 ]
+Detached kernel driver
+Found Rafael Micro R820T tuner
+Exact sample rate is: 1000000.026491 Hz
+[R82XX] PLL not locked!
+Sample rate set to 1000000 S/s.
+Tuner gain set to Auto.
+Tuned to 915.000MHz.
+Allocating 15 zero-copy buffers
+baseband_demod_FM: low pass filter for 1000000 Hz at cutoff 200000 Hz, 5.0 us
+{"time" : "2024-03-04 16:57:05", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:05", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:08", "model" : "Fineoffset-WH32", "id" : 35, "battery_ok" : 1, "temperature_C" : 5.900, "humidity" : 77, "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:20", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:20", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:38", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 7.400, "humidity" : 64, "data" : "7f5c000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:38", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 7.400, "humidity" : 64, "data" : "7f5c000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:41", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.100, "humidity" : 44, "data" : "3000000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:41", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.100, "humidity" : 44, "data" : "3000000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:57:48", "model" : "Fineoffset-WH51", "id" : "001260", "battery_ok" : 0.778, "battery_mV" : 1400, "moisture" : 38, "boost" : 0, "ad_raw" : 213, "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:06", "model" : "AmbientWeather-WH31B", "id" : 55, "channel" : 4, "battery_ok" : 1, "temperature_C" : 21.300, "humidity" : 44, "data" : "0900000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:06", "model" : "AmbientWeather-WH31B", "id" : 55, "channel" : 4, "battery_ok" : 1, "temperature_C" : 21.300, "humidity" : 44, "data" : "0900000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:07", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:07", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:12", "model" : "Fineoffset-WH32", "id" : 35, "battery_ok" : 1, "temperature_C" : 5.900, "humidity" : 76, "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:23", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:23", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:42", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.100, "humidity" : 44, "data" : "3000000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:42", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.100, "humidity" : 44, "data" : "3000000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:43", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 7.400, "humidity" : 64, "data" : "7f5c000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:43", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 7.400, "humidity" : 64, "data" : "7f5c000000", "mic" : "CRC"}
+{"time" : "2024-03-04 16:58:58", "model" : "Fineoffset-WH51", "id" : "001260", "battery_ok" : 0.778, "battery_mV" : 1400, "moisture" : 38, "boost" : 0, "ad_raw" : 213, "mic" : "CRC"}
+Time expired, exiting!
+Reattached kernel driver
+
+#-----------------------------------------------------------
+# rtl_433 found a few sensors so our hardware is working
+#  - one Fineoffset-WH32 temp+humidity sensor on channel 1
+#  - four AmbientWeather-WH31B temp+humidity sensors on channels 2-5
+#  - one Fineoffset-WH51 moisture sensor
+#-----------------------------------------------------------
+
+Note some sensors sent duplicate packets.  This is not a concern.
+We'll deal with that later.
+
+#-----------------------------------------------------------
+# download and install the weewx-sdr driver
+# then check it is present
+#-----------------------------------------------------------
+
+$ sudo weectl extension install -y https://github.com/matthewwall/weewx-sdr/archive/master.zip
+Using configuration file /etc/weewx/weewx.conf
+Extracting from zip archive /tmp/tmpnvd1v5pm
+Saving installer file to /etc/weewx/bin/user/installer/sdr
+Finished installing extension sdr from https://github.com/matthewwall/weewx-sdr/archive/master.zip
+Using configuration file /etc/weewx/weewx.conf
+
+$ weectl extension list
+Extension Name    Version   Description
+sdr               0.87      Capture data from rtl_433
+
+#-----------------------------------------------------------
+# at this point we can enable the SDR driver in weewx,
+# configure it, and try it out
+#-----------------------------------------------------------
+
+$ sudo weectl station reconfigure --no-prompt --driver=user.sdr
+Using configuration file /etc/weewx/weewx.conf
+Processing configuration file /etc/weewx/weewx.conf
+Saving configuration file /etc/weewx/weewx.conf
+Saved old configuration file as /etc/weewx/weewx.conf.20240304170426
+
+#-----------------------------------------------------------
+# the driver is installed but unconfigured, so edit the
+# weewx.conf file mentioned above.  We used the dpkg
+# installer so this requires sudo
+#-----------------------------------------------------------
+sudo vi /etc/weewx.con
+
+ - set debug=1 at the top of the file
+ - make the [SDR] stanza look like the following
+
+    [SDR]
+        driver = user.sdr
+        cmd = rtl_433 -f 915M -F json -M utc
+        log_unknown_sensors  = True
+        log_unmapped_sensors = True
+
+ - save the file and exit vi
+
+#-----------------------------------------------------------
+# at this point we have told weewx to use the SDR driver
+# with the appropriate flags to listen on the correct
+# frequency, output to JSON format, and convert the 
+# dateTime in the message to UTC
+#
+# try to start weewx
+#-----------------------------------------------------------
+
+$ sudo systemctl start weewx
+(and wait a few seconds)
+
+$ sudo systemctl status weewx
+● weewx.service - WeeWX
+     Loaded: loaded (/lib/systemd/system/weewx.service; enabled; preset: enabled)
+     Active: active (running) since Mon 2024-03-04 17:12:33 PST; 57s ago
+       Docs: https://weewx.com/docs
+   Main PID: 2627 (python3)
+      Tasks: 1 (limit: 3920)
+        CPU: 447ms
+     CGroup: /system.slice/weewx.service
+             └─2627 python3 /usr/share/weewx/weewxd.py /etc/weewx/weewx.conf
+
+Mar 04 17:12:34 pi4jr weewxd[2627]:   File "/etc/weewx/bin/user/sdr.py", line 198, in run
+Mar 04 17:12:34 pi4jr weewxd[2627]:   File "/etc/weewx/bin/user/sdr.py", line 198, in run
+Mar 04 17:12:34 pi4jr weewxd[2627]:     for line in iter(self._fd.readline, ''):
+Mar 04 17:12:34 pi4jr weewxd[2627]:     for line in iter(self._fd.readline, ''):
+Mar 04 17:12:34 pi4jr weewxd[2627]: ValueError: PyMemoryView_FromBuffer(): info->buf must not be NULL
+Mar 04 17:12:34 pi4jr weewxd[2627]: ValueError: PyMemoryView_FromBuffer(): info->buf must not be NULL
+Mar 04 17:12:34 pi4jr weewxd[2627]: DEBUG user.sdr: shutdown stderr-thread
+Mar 04 17:12:34 pi4jr weewxd[2627]: INFO user.sdr: shutdown complete
+Mar 04 17:12:34 pi4jr weewxd[2627]: CRITICAL __main__: Caught WeeWxIOError: rtl_433 process is not running
+Mar 04 17:12:34 pi4jr weewxd[2627]: CRITICAL __main__:     ****  Waiting 60.0 seconds then retrying...
+
+#-----------------------------------------------------------
+# what's going on here ?  lets look more at the logs
+#-----------------------------------------------------------
+
+$ tail -n 200 /var/log/weewx/weewx.log
+(many lines then the following)
+
+2024-03-04T17:13:34.305289-08:00 pi4jr weewxd[2627]: INFO weewx.engine: Starting main packet loop.
+2024-03-04T17:13:34.717197-08:00 pi4jr weewxd[2627]: INFO __main__: Received signal TERM (15).
+2024-03-04T17:13:34.717467-08:00 pi4jr weewxd[2627]: INFO weewx.engine: Main loop exiting. Shutting engine down.
+2024-03-04T17:13:34.717654-08:00 pi4jr weewxd[2627]: INFO user.sdr: shutdown process rtl_433 -f 915M -F json -M utc
+2024-03-04T17:13:34.717802-08:00 pi4jr weewxd[2627]: DEBUG user.sdr: close stdout
+2024-03-04T17:13:34.718839-08:00 pi4jr weewxd[2627]: DEBUG user.sdr: close stderr
+2024-03-04T17:13:34.719140-08:00 pi4jr weewxd[2627]: Exception in thread stdout-thread:
+2024-03-04T17:13:34.719383-08:00 pi4jr weewxd[2627]: Traceback (most recent call last):
+2024-03-04T17:13:34.719681-08:00 pi4jr weewxd[2627]:   File "/usr/lib/python3.11/threading.py", line 1038, in _bootstrap_inner
+2024-03-04T17:13:34.720317-08:00 pi4jr weewxd[2627]: DEBUG user.sdr: shutdown stdout-thread
+2024-03-04T17:13:34.720928-08:00 pi4jr weewxd[2627]: Exception in thread stderr-thread:
+2024-03-04T17:13:34.721536-08:00 pi4jr weewxd[2627]: Traceback (most recent call last):
+2024-03-04T17:13:34.721988-08:00 pi4jr weewxd[2627]:     self.run()
+2024-03-04T17:13:34.722194-08:00 pi4jr weewxd[2627]:   File "/etc/weewx/bin/user/sdr.py", line 198, in run
+2024-03-04T17:13:34.722666-08:00 pi4jr weewxd[2627]:   File "/usr/lib/python3.11/threading.py", line 1038, in _bootstrap_inner
+2024-03-04T17:13:34.722929-08:00 pi4jr weewxd[2627]:     for line in iter(self._fd.readline, ''):
+2024-03-04T17:13:34.723103-08:00 pi4jr weewxd[2627]: ValueError: PyMemoryView_FromBuffer(): info->buf must not be NULL
+2024-03-04T17:13:34.723369-08:00 pi4jr weewxd[2627]: DEBUG user.sdr: shutdown stderr-thread
+2024-03-04T17:13:34.724340-08:00 pi4jr weewxd[2627]:     self.run()
+2024-03-04T17:13:34.724706-08:00 pi4jr weewxd[2627]:   File "/etc/weewx/bin/user/sdr.py", line 198, in run
+2024-03-04T17:13:34.725260-08:00 pi4jr weewxd[2627]:     for line in iter(self._fd.readline, ''):
+2024-03-04T17:13:34.725492-08:00 pi4jr weewxd[2627]: ValueError: PyMemoryView_FromBuffer(): info->buf must not be NULL
+2024-03-04T17:13:34.726022-08:00 pi4jr weewxd[2627]: INFO user.sdr: shutdown complete
+2024-03-04T17:13:34.727033-08:00 pi4jr weewxd[2627]: INFO __main__: Terminating weewx version 5.0.2
+2024-03-04T17:13:34.739092-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****  Traceback (most recent call last):
+2024-03-04T17:13:34.739468-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****    File "/usr/share/weewx/weewxd.py", line 166, in main
+2024-03-04T17:13:34.739767-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****      engine.run()
+2024-03-04T17:13:34.739982-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****    File "/usr/share/weewx/weewx/engine.py", line 204, in run
+2024-03-04T17:13:34.740172-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****      for packet in self.console.genLoopPackets():
+2024-03-04T17:13:34.740369-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****    File "/etc/weewx/bin/user/sdr.py", line 3296, in genLoopPackets
+2024-03-04T17:13:34.740563-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****      for lines in self._mgr.get_stdout():
+2024-03-04T17:13:34.740763-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****    File "/etc/weewx/bin/user/sdr.py", line 282, in get_stdout
+2024-03-04T17:13:34.740978-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****      line = self.stdout_queue.get(True, 3).decode()
+2024-03-04T17:13:34.741207-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2024-03-04T17:13:34.741412-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****    File "/usr/lib/python3.11/queue.py", line 180, in get
+2024-03-04T17:13:34.741606-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****      self.not_empty.wait(remaining)
+2024-03-04T17:13:34.741805-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****    File "/usr/lib/python3.11/threading.py", line 324, in wait
+2024-03-04T17:13:34.742018-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****      gotit = waiter.acquire(True, timeout)
+2024-03-04T17:13:34.742258-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2024-03-04T17:13:34.742548-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****    File "/usr/share/weewx/weewxd.py", line 260, in sigTERMhandler
+2024-03-04T17:13:34.742815-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****      raise Terminate
+2024-03-04T17:13:34.743056-08:00 pi4jr weewxd[2627]: DEBUG __main__:     ****  Terminate
+
+#-----------------------------------------------------------
+# why is this terminating ? It turns out it is permissions.
+#
+# weewx runs as user 'weewx' and group 'weewx'
+# but that user does not have the privileges to
+# access the USB hardware dongle
+#
+# lets add them to the 'plugdev' group which should work
+#-----------------------------------------------------------
+
+$ sudo usermod -aG plugdev weewx
+$ sudo systemctl start weewx
+(wait a few seconds)
+
+$ sudo systemctl status weewx
+pi@pi4jr:/var/log/weewx $ sudo systemctl start weewx
+pi@pi4jr:/var/log/weewx $ sudo systemctl status weewx
+● weewx.service - WeeWX
+     Loaded: loaded (/lib/systemd/system/weewx.service; enabled; preset: enabled)
+     Active: active (running) since Mon 2024-03-04 17:18:02 PST; 1s ago
+       Docs: https://weewx.com/docs
+   Main PID: 2698 (python3)
+      Tasks: 5 (limit: 3920)
+        CPU: 531ms
+     CGroup: /system.slice/weewx.service
+             ├─2698 python3 /usr/share/weewx/weewxd.py /etc/weewx/weewx.conf
+             └─2700 rtl_433 -f 915M -F json -M utc
+
+Mar 04 17:18:02 pi4jr weewxd[2698]: DEBUG weewx.engine: Finished loading service weewx.engine.StdPrint
+Mar 04 17:18:02 pi4jr weewxd[2698]: DEBUG weewx.engine: Loading service weewx.engine.StdReport
+Mar 04 17:18:02 pi4jr weewxd[2698]: INFO weewx.engine: 'pyephem' detected, extended almanac data is available
+Mar 04 17:18:02 pi4jr weewxd[2698]: DEBUG weewx.engine: Finished loading service weewx.engine.StdReport
+Mar 04 17:18:02 pi4jr weewxd[2698]: INFO __main__: Starting up weewx version 5.0.2
+Mar 04 17:18:02 pi4jr weewxd[2698]: DEBUG weewx.engine: Station does not support reading the time
+Mar 04 17:18:02 pi4jr weewxd[2698]: INFO weewx.engine: Using binding 'wx_binding' to database 'weewx.sdb'
+Mar 04 17:18:02 pi4jr weewxd[2698]: INFO weewx.manager: Starting backfill of daily summaries
+Mar 04 17:18:02 pi4jr weewxd[2698]: INFO weewx.manager: Daily summaries up to date
+Mar 04 17:18:02 pi4jr weewxd[2698]: INFO weewx.engine: Starting main packet loop.
+
+pi@pi4jr:/var/log/weewx $ ps axu | egrep "weewx | rtl_433" | grep -v grep
+weewx     2698  0.7  0.5  49236 21824 ?        Ssl  17:18   0:00 python3 /usr/share/weewx/weewxd.py /etc/weewx/weewx.conf
+weewx     2700 15.5  0.2  58716  8620 ?        Rl   17:18   0:09 rtl_433 -f 915M -F json -M utc
+
+#-----------------------------------------------------------
+# success - adding the weewx user to group plugdev worked.
+#           weewx is running as is the rtl_433 process.
+#
+# time to see if it's working....
+#-----------------------------------------------------------
+
+$ tail -n 200 /var/log/weewx/weewx.log
+
+(...many lines...)
+2024-03-04T17:18:02.800799-08:00 pi4jr weewxd[2698]: INFO weewx.engine: Starting main packet loop.
+2024-03-04T17:18:16.303687-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:18:16.304403-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:13", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 6.900, "humidity" : 67, "data" : "435c000000", "mic" : "CRC"}#012'
+2024-03-04T17:18:16.304702-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:18:16.304945-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:13", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 6.900, "humidity" : 67, "data" : "435c000000", "mic" : "CRC"}#012'
+2024-03-04T17:18:24.135382-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:18:24.136237-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:20", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}#012'
+2024-03-04T17:18:24.136657-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:18:24.136991-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:20", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}#012'
+2024-03-04T17:18:31.349191-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model Fineoffset-WH32
+2024-03-04T17:18:31.350610-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:28", "model" : "Fineoffset-WH32", "id" : 35, "battery_ok" : 1, "temperature_C" : 5.600, "humidity" : 79, "mic" : "CRC"}#012'
+2024-03-04T17:18:51.667822-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:18:51.668520-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:47", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}#012'
+2024-03-04T17:18:51.668863-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:18:51.669129-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:47", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}#012'
+2024-03-04T17:18:51.679357-08:00 pi4jr weewxd[2698]: INFO user.sdr: unmapped: {'dateTime': 1709601528, 'usUnits': 16, 'soil_moisture_percent.001260.FOWH51Packet': 38.0, 'boost.001260.FOWH51Packet': 0.0, 'soil_moisture_raw.001260.FOWH51Packet': 213.0, 'freq1.001260.FOWH51Packet': None, 'freq2.001260.FOWH51Packet': None, 'battery_ok.001260.FOWH51Packet': 0.778, 'battery_mV.001260.FOWH51Packet': 1400.0, 'snr.001260.FOWH51Packet': None, 'rssi.001260.FOWH51Packet': None, 'noise.001260.FOWH51Packet': None}
+2024-03-04T17:18:51.679985-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:18:51.680404-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:18:48", "model" : "AmbientWeather-WH31B", "id" : 55, "channel" : 4, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 44, "data" : "5c00000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:05.557402-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:05.558282-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:02", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.000, "humidity" : 44, "data" : "7b00000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:05.558660-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:05.558964-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:02", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.000, "humidity" : 44, "data" : "7b00000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:21.294426-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:21.295191-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:18", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 6.900, "humidity" : 67, "data" : "435c000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:21.295814-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:21.296248-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:18", "model" : "AmbientWeather-WH31B", "id" : 202, "channel" : 5, "battery_ok" : 1, "temperature_C" : 6.900, "humidity" : 67, "data" : "435c000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:27.062547-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:27.065680-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:23", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:27.066193-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:27.066545-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:23", "model" : "AmbientWeather-WH31B", "id" : 196, "channel" : 3, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 42, "data" : "9600000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:35.317285-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model Fineoffset-WH32
+2024-03-04T17:19:35.318031-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:32", "model" : "Fineoffset-WH32", "id" : 35, "battery_ok" : 1, "temperature_C" : 5.600, "humidity" : 79, "mic" : "CRC"}#012'
+2024-03-04T17:19:52.877323-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:52.878339-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:49", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}#012'
+2024-03-04T17:19:52.878776-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:19:52.879128-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:49", "model" : "AmbientWeather-WH31B", "id" : 153, "channel" : 2, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 41, "data" : "a300000000", "mic" : "CRC"}#012'
+2024-03-04T17:20:00.622411-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:20:00.623201-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:57", "model" : "AmbientWeather-WH31B", "id" : 55, "channel" : 4, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 44, "data" : "5c00000000", "mic" : "CRC"}#012'
+2024-03-04T17:20:00.623776-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:20:00.624186-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:19:57", "model" : "AmbientWeather-WH31B", "id" : 55, "channel" : 4, "battery_ok" : 1, "temperature_C" : 21.200, "humidity" : 44, "data" : "5c00000000", "mic" : "CRC"}#012'
+2024-03-04T17:20:06.511912-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:20:06.512667-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:20:03", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.000, "humidity" : 44, "data" : "7b00000000", "mic" : "CRC"}#012'
+2024-03-04T17:20:06.513142-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: parse_json: unknown model AmbientWeather-WH31B
+2024-03-04T17:20:06.513554-08:00 pi4jr weewxd[2698]: DEBUG user.sdr: punt unrecognized line '{"time" : "2024-03-05 01:20:03", "model" : "AmbientWeather-WH31B", "id" : 145, "channel" : 1, "battery_ok" : 1, "temperature_C" : 21.000, "humidity" : 44, "data" : "7b00000000", "mic" : "CRC"}#012'
+
+
+#-----------------------------------------------------------
+# weewx is running but...
+#   - the WH31B sensor model is unknown to the sdr driver
+#   - the WH32 sensor model is unknown to the sdr driver
+#   - the WH51 sensor model is known, but the data
+#        from it is not being mapped to a weewx db element
+#
+# lets map the WH51 data to soilMoist1 first
+#-----------------------------------------------------------
+
+Add a [[sensor_map]] stanza inside [SDR] in weewx.conf
+via 'sudo vi /etc/weewx/weewx.conf'.  When completed, the
+whole SDR stanza should look like:
+
+    [SDR]
+        driver = user.sdr
+        cmd = rtl_433 -f 915M -F json -M utc
+        log_unknown_sensors  = True
+        log_unmapped_sensors = True
+
+       [[sensor_map]]
+           soilMoist1 = soil_moisture_percent.001260.FOWH51Packet
+
+Then restart weewx 
+$ sudo systemctl restart weewx
+
+If you run 'tail -f /var/log/weewx/weewx.log' in another window,
+you'll see a packet being generated and logged by the driver
+when WH51 data is received. It should look something like:
+
+2024-03-04T17:27:03.386202-08:00 pi4jr weewxd[2844]: DEBUG user.sdr: packet={'soilMoist1': 38.0, 'dateTime': 1709602018, 'usUnits': 16}
+
+Wait until you see the 5-minute archive period pass and weewx will save that data to the db.
+
+Eventually you'll see something like the following in the weewx.log
+2024-03-04T17:31:41.117603-08:00 pi4jr weewxd[2844]: DEBUG user.sdr: packet={'soilMoist1': 38.0, 'dateTime': 1709602298, 'usUnits': 16}
+2024-03-04T17:31:41.187003-08:00 pi4jr weewxd[2844]: INFO weewx.manager: Added record 2024-03-04 17:30:00 PST (1709602200) to database 'weewx.sdb'
+2024-03-04T17:31:41.222612-08:00 pi4jr weewxd[2844]: INFO weewx.manager: Added record 2024-03-04 17:30:00 PST (1709602200) to daily summary in 'weewx.sdb'
+
+Next query the db and see that it indeed wrote data into the db into the soilMoist1 element.
+
+pi@pi4jr:/var/log/weewx $ echo "select dateTime,soilMoist1 from archive;" | sqlite3 /var/lib/weewx/weewx.sdb
+1709599200|
+1709599500|
+1709599800|
+1709600100|
+1709600400|
+1709600700|
+1709602200|38.0
+
+#-----------------------------------------------------------
+# SUCCESS - it wrote the mapped data to the specified field
+#           in the weewx db.
+#
+# At this point we need to add model definitions in sdr.py
+# so that the WH31B and WH32 models are known.  The easiest
+# way is to capture the unrecognized line on the 'punt'
+# message and look for a previous Class that seems close
+# in terms of content.  Then copy that Class to a new name
+# and edit as needed
+#
+# In sdr.py simply add the following at line 1812 or so
+# you can do 'sudo vi +1812 sdr.py' to go there immediately
+#-----------------------------------------------------------
+
+class AmbientWH31BPacket(Packet):
+
+    # {'time': '2024-03-04 17:36:20', 'model': 'AmbientWeather-WH31B', 'id': 196, 'channel': 3, 'battery_ok': 1, 'temperature_C': 21.6, 'humidity': 40, 'data': 'ea00000000', 'mic': 'CRC'}
+    IDENTIFIER = "AmbientWeather-WH31B"
+
+    @staticmethod
+    def parse_json(obj):
+        pkt = dict()
+        pkt['dateTime'] = Packet.parse_time(obj.get('time'))
+        pkt['usUnits'] = weewx.METRICWX
+        pkt['station_id'] = obj.get('id')
+        pkt['temperature'] = Packet.get_float(obj, 'temperature_C')
+        pkt['humidity'] = Packet.get_float(obj, 'humidity')
+        pkt['battery'] = 0 if Packet.get_int(obj, 'battery_ok') == 1 else 1
+        pkt['channel'] = Packet.get_int(obj, 'channel')
+        pkt['rssi'] = Packet.get_int(obj, 'rssi')
+        pkt['snr'] = Packet.get_float(obj, 'snr')
+        pkt['noise'] = Packet.get_float(obj, 'noise')
+        return AmbientWH31BPacket.insert_ids(pkt)
+
+    @staticmethod
+    def insert_ids(pkt):
+        station_id = pkt.pop('station_id', '0000')
+        pkt = Packet.add_identifiers(pkt, station_id, AmbientWH31BPacket.__name__)
+        return pkt
+
+class FineOffsetWH32Packet(Packet):
+
+    # {'time': '2024-03-04 17:41:55', 'model': 'Fineoffset-WH32', 'id': 35, 'battery_ok': 1, 'temperature_C': 3.2, 'humidity': 91, 'mic': 'CRC'}
+
+    IDENTIFIER = "Fineoffset-WH32"
+
+    @staticmethod
+    def parse_json(obj):
+        pkt = dict()
+        pkt['dateTime'] = Packet.parse_time(obj.get('time'))
+        pkt['usUnits'] = weewx.METRICWX
+        pkt['station_id'] = obj.get('id')
+        pkt['temperature'] = Packet.get_float(obj, 'temperature_C')
+        pkt['humidity'] = Packet.get_float(obj, 'humidity')
+        pkt['battery'] = 0 if Packet.get_int(obj, 'battery_ok') == 1 else 1
+        pkt['channel'] = Packet.get_int(obj, 'channel')
+        return FineOffsetWH32Packet.insert_ids(pkt)
+
+    @staticmethod
+    def insert_ids(pkt):
+        station_id = pkt.pop('station_id', '0000')
+        pkt = Packet.add_identifiers(pkt, station_id, FineOffsetWH32Packet.__name__)
+        return pkt
+
+#-----------------------------------------------------------
+# restart weewx and look at the logs again.  We expect to
+# see no 'punt' messages but still expect to see many
+# messages saying the sensors are not mapped to weewx
+# data elements (yet)
+#-----------------------------------------------------------
+
+$ sudo systemctl start weewx
+$ sleep 60
+$ sudo systemctl stop weewx
+$ tail -n 200 /var/log/weewx/weewx.log
+
+2024-03-04T17:42:16.581013-08:00 pi4jr weewxd[2955]: INFO __main__: Starting up weewx version 5.0.2
+2024-03-04T17:42:16.581134-08:00 pi4jr weewxd[2955]: DEBUG weewx.engine: Station does not support reading the time
+2024-03-04T17:42:16.581283-08:00 pi4jr weewxd[2955]: INFO weewx.engine: Using binding 'wx_binding' to database 'weewx.sdb'
+2024-03-04T17:42:16.581406-08:00 pi4jr weewxd[2955]: INFO weewx.manager: Starting backfill of daily summaries
+2024-03-04T17:42:16.581526-08:00 pi4jr weewxd[2955]: INFO weewx.manager: Daily summaries up to date
+2024-03-04T17:42:16.581947-08:00 pi4jr weewxd[2955]: INFO weewx.engine: Starting main packet loop.
+2024-03-04T17:42:28.572562-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602945, 'usUnits': 17, 'temperature.145.AmbientWH31BPacket': 21.0, 'humidity.145.AmbientWH31BPacket': 44.0, 'battery.145.AmbientWH31BPacket': 0, 'channel.145.AmbientWH31BPacket': 1, 'rssi.145.AmbientWH31BPacket': None, 'snr.145.AmbientWH31BPacket': None, 'noise.145.AmbientWH31BPacket': None}
+2024-03-04T17:42:28.581165-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602945, 'usUnits': 17, 'temperature.145.AmbientWH31BPacket': 21.0, 'humidity.145.AmbientWH31BPacket': 44.0, 'battery.145.AmbientWH31BPacket': 0, 'channel.145.AmbientWH31BPacket': 1, 'rssi.145.AmbientWH31BPacket': None, 'snr.145.AmbientWH31BPacket': None, 'noise.145.AmbientWH31BPacket': None}
+2024-03-04T17:42:33.131350-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602949, 'usUnits': 17, 'temperature.196.AmbientWH31BPacket': 21.2, 'humidity.196.AmbientWH31BPacket': 42.0, 'battery.196.AmbientWH31BPacket': 0, 'channel.196.AmbientWH31BPacket': 3, 'rssi.196.AmbientWH31BPacket': None, 'snr.196.AmbientWH31BPacket': None, 'noise.196.AmbientWH31BPacket': None}
+2024-03-04T17:42:33.132422-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602949, 'usUnits': 17, 'temperature.196.AmbientWH31BPacket': 21.2, 'humidity.196.AmbientWH31BPacket': 42.0, 'battery.196.AmbientWH31BPacket': 0, 'channel.196.AmbientWH31BPacket': 3, 'rssi.196.AmbientWH31BPacket': None, 'snr.196.AmbientWH31BPacket': None, 'noise.196.AmbientWH31BPacket': None}
+2024-03-04T17:42:36.922324-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602953, 'usUnits': 17, 'temperature.153.AmbientWH31BPacket': 21.2, 'humidity.153.AmbientWH31BPacket': 41.0, 'battery.153.AmbientWH31BPacket': 0, 'channel.153.AmbientWH31BPacket': 2, 'rssi.153.AmbientWH31BPacket': None, 'snr.153.AmbientWH31BPacket': None, 'noise.153.AmbientWH31BPacket': None}
+2024-03-04T17:42:36.923271-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602953, 'usUnits': 17, 'temperature.153.AmbientWH31BPacket': 21.2, 'humidity.153.AmbientWH31BPacket': 41.0, 'battery.153.AmbientWH31BPacket': 0, 'channel.153.AmbientWH31BPacket': 2, 'rssi.153.AmbientWH31BPacket': None, 'snr.153.AmbientWH31BPacket': None, 'noise.153.AmbientWH31BPacket': None}
+2024-03-04T17:43:03.399173-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602977, 'usUnits': 17, 'temperature.55.AmbientWH31BPacket': 21.2, 'humidity.55.AmbientWH31BPacket': 44.0, 'battery.55.AmbientWH31BPacket': 0, 'channel.55.AmbientWH31BPacket': 4, 'rssi.55.AmbientWH31BPacket': None, 'snr.55.AmbientWH31BPacket': None, 'noise.55.AmbientWH31BPacket': None}
+2024-03-04T17:43:03.400837-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602977, 'usUnits': 17, 'temperature.55.AmbientWH31BPacket': 21.2, 'humidity.55.AmbientWH31BPacket': 44.0, 'battery.55.AmbientWH31BPacket': 0, 'channel.55.AmbientWH31BPacket': 4, 'rssi.55.AmbientWH31BPacket': None, 'snr.55.AmbientWH31BPacket': None, 'noise.55.AmbientWH31BPacket': None}
+2024-03-04T17:43:03.401778-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602980, 'usUnits': 17, 'temperature.35.FineOffsetWH32Packet': 5.3, 'humidity.35.FineOffsetWH32Packet': 81.0, 'battery.35.FineOffsetWH32Packet': 0, 'channel.35.FineOffsetWH32Packet': None}
+2024-03-04T17:43:11.392309-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602988, 'usUnits': 17, 'temperature.202.AmbientWH31BPacket': 6.4, 'humidity.202.AmbientWH31BPacket': 70.0, 'battery.202.AmbientWH31BPacket': 0, 'channel.202.AmbientWH31BPacket': 5, 'rssi.202.AmbientWH31BPacket': None, 'snr.202.AmbientWH31BPacket': None, 'noise.202.AmbientWH31BPacket': None}
+2024-03-04T17:43:11.393717-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709602988, 'usUnits': 17, 'temperature.202.AmbientWH31BPacket': 6.4, 'humidity.202.AmbientWH31BPacket': 70.0, 'battery.202.AmbientWH31BPacket': 0, 'channel.202.AmbientWH31BPacket': 5, 'rssi.202.AmbientWH31BPacket': None, 'snr.202.AmbientWH31BPacket': None, 'noise.202.AmbientWH31BPacket': None}
+2024-03-04T17:43:29.616980-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709603006, 'usUnits': 17, 'temperature.145.AmbientWH31BPacket': 21.0, 'humidity.145.AmbientWH31BPacket': 44.0, 'battery.145.AmbientWH31BPacket': 0, 'channel.145.AmbientWH31BPacket': 1, 'rssi.145.AmbientWH31BPacket': None, 'snr.145.AmbientWH31BPacket': None, 'noise.145.AmbientWH31BPacket': None}
+2024-03-04T17:43:29.618410-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709603006, 'usUnits': 17, 'temperature.145.AmbientWH31BPacket': 21.0, 'humidity.145.AmbientWH31BPacket': 44.0, 'battery.145.AmbientWH31BPacket': 0, 'channel.145.AmbientWH31BPacket': 1, 'rssi.145.AmbientWH31BPacket': None, 'snr.145.AmbientWH31BPacket': None, 'noise.145.AmbientWH31BPacket': None}
+2024-03-04T17:43:38.919475-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709603015, 'usUnits': 17, 'temperature.153.AmbientWH31BPacket': 21.2, 'humidity.153.AmbientWH31BPacket': 41.0, 'battery.153.AmbientWH31BPacket': 0, 'channel.153.AmbientWH31BPacket': 2, 'rssi.153.AmbientWH31BPacket': None, 'snr.153.AmbientWH31BPacket': None, 'noise.153.AmbientWH31BPacket': None}
+2024-03-04T17:43:38.920594-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709603015, 'usUnits': 17, 'temperature.153.AmbientWH31BPacket': 21.2, 'humidity.153.AmbientWH31BPacket': 41.0, 'battery.153.AmbientWH31BPacket': 0, 'channel.153.AmbientWH31BPacket': 2, 'rssi.153.AmbientWH31BPacket': None, 'snr.153.AmbientWH31BPacket': None, 'noise.153.AmbientWH31BPacket': None}
+2024-03-04T17:44:09.731453-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709603044, 'usUnits': 17, 'temperature.35.FineOffsetWH32Packet': 5.3, 'humidity.35.FineOffsetWH32Packet': 81.0, 'battery.35.FineOffsetWH32Packet': 0, 'channel.35.FineOffsetWH32Packet': None}
+2024-03-04T17:44:09.732769-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709603046, 'usUnits': 17, 'temperature.55.AmbientWH31BPacket': 21.2, 'humidity.55.AmbientWH31BPacket': 44.0, 'battery.55.AmbientWH31BPacket': 0, 'channel.55.AmbientWH31BPacket': 4, 'rssi.55.AmbientWH31BPacket': None, 'snr.55.AmbientWH31BPacket': None, 'noise.55.AmbientWH31BPacket': None}
+2024-03-04T17:44:09.733256-08:00 pi4jr weewxd[2955]: INFO user.sdr: unmapped: {'dateTime': 1709603046, 'usUnits': 17, 'temperature.55.AmbientWH31BPacket': 21.2, 'humidity.55.AmbientWH31BPacket': 44.0, 'battery.55.AmbientWH31BPacket': 0, 'channel.55.AmbientWH31BPacket': 4, 'rssi.55.AmbientWH31BPacket': None, 'snr.55.AmbientWH31BPacket': None, 'noise.55.AmbientWH31BPacket': None}
+2024-03-04T17:44
+
+#-----------------------------------------------------------
+# note that the driver even tells you what to add to your
+# sensor map by reporting what data elements are available
+# for each reading.
+#
+# Add the missing sensors, mapping to extraTemp1-5 
+# and outTemp respectively.  Edit your weewx.conf and
+# set the [SDR] stanza to look as follows.
+#-----------------------------------------------------------
+
+[SDR]
+    driver = user.sdr
+    cmd = rtl_433 -f 915M -F json -M utc
+    log_unknown_sensors  = True
+    log_unmapped_sensors = True
+
+    [[sensor_map]]
+        soilMoist1 = soil_moisture_percent.001260.FOWH51Packet
+
+        extraTemp1     = temperature.145.AmbientWH31BPacket
+        extraHumid1    = humidity.145.AmbientWH31BPacket
+        batteryStatus1 = battery.145.AmbientWH31BPacket
+
+        extraTemp2     = temperature.153.AmbientWH31BPacket
+        extraHumid2    = humidity.153.AmbientWH31BPacket
+        batteryStatus2 = battery.153.AmbientWH31BPacket
+
+        extraTemp3     = temperature.196.AmbientWH31BPacket
+        extraHumid3    = humidity.196.AmbientWH31BPacket
+        batteryStatus3 = battery.196.AmbientWH31BPacket
+
+        extraTemp4     = temperature.55.AmbientWH31BPacket
+        extraHumid4    = humidity.55.AmbientWH31BPacket
+        batteryStatus4 = battery.55.AmbientWH31BPacket
+
+        extraTemp5     = temperature.202.AmbientWH31BPacket
+        extraHumid5    = humidity.202.AmbientWH31BPacket
+        batteryStatus5 = battery.202.AmbientWH31BPacket
+
+        outTemp              = temperature.35.FineOffsetWH32Packet
+        outHumidity          = humidity.35.FineOffsetWH32Packet
+        outTempBatteryStatus = battery.35.FineOffsetWH32Packet
+
+#-----------------------------------------------------------
+# restart weewx and 'again' watch your logfile
+# which should be clean hopefully
+#-----------------------------------------------------------
+
+2024-03-04T17:49:09.797749-08:00 pi4jr weewxd[2996]: INFO weewx.manager: Daily summaries up to date
+2024-03-04T17:49:09.797939-08:00 pi4jr weewxd[2996]: INFO weewx.engine: Starting main packet loop.
+2024-03-04T17:49:27.426034-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: packet={'outTemp': 5.2, 'outHumidity': 81.0, 'outTempBatteryStatus': 0, 'dateTime': 1709603364, 'usUnits': 17}
+2024-03-04T17:49:35.644798-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: packet={'extraTemp1': 21.0, 'extraHumid1': 43.0, 'batteryStatus1': 0, 'dateTime': 1709603372, 'usUnits': 17}
+2024-03-04T17:49:35.650592-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: ignoring duplicate packet {'extraTemp1': 21.0, 'extraHumid1': 43.0, 'batteryStatus1': 0, 'dateTime': 1709603372, 'usUnits': 17}
+2024-03-04T17:49:41.406379-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: packet={'extraTemp5': 6.3, 'extraHumid5': 71.0, 'batteryStatus5': 0, 'dateTime': 1709603378, 'usUnits': 17}
+2024-03-04T17:49:41.411972-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: ignoring duplicate packet {'extraTemp5': 6.3, 'extraHumid5': 71.0, 'batteryStatus5': 0, 'dateTime': 1709603378, 'usUnits': 17}
+2024-03-04T17:49:50.848706-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: packet={'extraTemp2': 21.2, 'extraHumid2': 41.0, 'batteryStatus2': 0, 'dateTime': 1709603387, 'usUnits': 17}
+2024-03-04T17:49:50.853909-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: ignoring duplicate packet {'extraTemp2': 21.2, 'extraHumid2': 41.0, 'batteryStatus2': 0, 'dateTime': 1709603387, 'usUnits': 17}
+2024-03-04T17:49:54.650025-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: packet={'extraTemp4': 21.3, 'extraHumid4': 44.0, 'batteryStatus4': 0, 'dateTime': 1709603391, 'usUnits': 17}
+2024-03-04T17:49:54.655173-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: ignoring duplicate packet {'extraTemp4': 21.3, 'extraHumid4': 44.0, 'batteryStatus4': 0, 'dateTime': 1709603391, 'usUnits': 17}
+2024-03-04T17:50:31.351723-08:00 pi4jr weewxd[2996]: DEBUG user.sdr: packet={'outTemp': 5.2, 'outHumidity': 81.0, 'outTempBatteryStatus': 0, 'dateTime': 1709603428, 'usUnits': 17}
+2024-03-04T17:50:31.424572-08:00 pi4jr weewxd[2996]: INFO weewx.manager: Added record 2024-03-04 17:50:00 PST (1709603400) to database 'weewx.sdb'
+2024-03-04T17:50:31.455402-08:00 pi4jr weewxd[2996]: INFO weewx.manager: Added record 2024-03-04 17:50:00 PST (1709603400) to daily summary in 'weewx.sdb'
+
+#-----------------------------------------------------------
+# close....very close....but we're seeing duplicate packets
+# and the logging is a little too verbose
+#
+# Lets patch sdr.py and edit weewx.conf to cause
+# the driver to not log the duplicate packets and
+# also not log the assembled packets it calculated
+#-----------------------------------------------------------
+
+In the [SDR] stanza in weewx.conf add:
+    log_packets            = False    # default=True
+    log_duplicate_readings = False    # default=True
+
+In sdr.py at line 3336 or so, add two lines to the file
+directly below the log_unmapped line:
+        self._log_packets  = tobool(stn_dict.get('log_packets', True))
+        self._log_dups     = tobool(stn_dict.get('log_duplicate_readings', True))
+
+Your __init__ routine should look like:
+
+def __init__(self, **stn_dict):
+        loginf('driver version is %s' % DRIVER_VERSION)
+        self._model = stn_dict.get('model', 'SDR')
+        loginf('model is %s' % self._model)
+        self._log_lines = tobool(stn_dict.get('log_lines', False))
+        self._log_unknown = tobool(stn_dict.get('log_unknown_sensors', False))
+        self._log_unmapped = tobool(stn_dict.get('log_unmapped_sensors', False))
+        self._log_packets  = tobool(stn_dict.get('log_packets', True))
+        self._log_dups     = tobool(stn_dict.get('log_duplicate_readings', True))
+        self._sensor_map = stn_dict.get('sensor_map', {})
+        loginf('sensor map is %s' % self._sensor_map)
+        self._deltas = stn_dict.get('deltas', SDRDriver.DEFAULT_DELTAS)
+        loginf('deltas is %s' % self._deltas)
+        self._ts_delta = stn_dict.get('timestamp_match_threshhold', SDRDriver.TIMESTAMP_MATCH_THRESHHOLD)
+        self._counter_values = dict()
+        cmd = stn_dict.get('cmd', DEFAULT_CMD)
+        path = stn_dict.get('path', None)
+        ld_library_path = stn_dict.get('ld_library_path', None)
+        self._last_pkt = None # avoid duplicate sequential packets
+        self._mgr = ProcManager()
+        self._mgr.startup(cmd, path, ld_library_path)
+
+Then in sdr.py at line 3358 or so the genLoopPackets(self) routine
+should be modified as follows.  Basically we're adding 'if' statements
+ala 'if self._log_packets' and 'if self._log_dups' to make the logging
+messages more controllable.
+
+    def genLoopPackets(self):
+        while self._mgr.running():
+            for lines in self._mgr.get_stdout():
+                if self._log_lines:
+                    loginf("lines: %s" % lines)
+                for packet in PacketFactory.create(lines):
+                    if packet:
+                        pkt = self.map_to_fields(packet, self._sensor_map)
+                        if pkt:
+                            if not self._packets_match(pkt, self._last_pkt):
+                                if self._log_packets:
+                                    logdbg("packet=%s" % pkt)
+                                self._last_pkt = pkt
+                                self._calculate_deltas(pkt)
+                                yield pkt
+                            else:
+                                if self._log_dups:
+                                    logdbg("ignoring duplicate packet %s" % pkt)
+                        elif self._log_unmapped:
+                            loginf("unmapped: %s" % packet)
+                    elif self._log_unknown:
+                        loginf("unparsed: %s" % lines)
+            # report any errors
+            for line in self._mgr.get_stderr():
+                logerr(line)
+        else:
+            for line in self._mgr.get_stderr():
+                logerr(line)
+            raise weewx.WeeWxIOError("rtl_433 process is not running")
+
+#-----------------------------------------------------------
+# at this point we've enhanced sdr.py to make debug logging
+# more controllable, and we've set weewx.conf to turn the
+# logging of duplicates and packets off, while leaving any
+# other logging enabled.
+#
+# restart weewx yet again and 'tail -f /var/log/weewx/weewx.log'
+# and it should be clean now
+#-----------------------------------------------------------
+
+$ sudo systemctl restart weewx
+$ sleep 120
+$ sudo systemctl stop weewx
+$ tail -n 200 /var/log/weewx/weewx.log
+
+
+2024-03-04T18:22:56.523933-08:00 pi4jr weewxd[3185]: INFO weewx.engine: Starting main packet loop.
+2024-03-04T18:25:21.195074-08:00 pi4jr weewxd[3185]: INFO weewx.manager: Added record 2024-03-04 18:25:00 PST (1709605500) to database 'weewx.sdb'
+2024-03-04T18:25:21.228876-08:00 pi4jr weewxd[3185]: INFO weewx.manager: Added record 2024-03-04 18:25:00 PST (1709605500) to daily summary in 'weewx.sdb'
+2024-03-04T18:25:21.417061-08:00 pi4jr weewxd[3185]: DEBUG weewx.reportengine: Running reports for latest time in the database.
+2024-03-04T18:25:21.417394-08:00 pi4jr weewxd[3185]: DEBUG weewx.reportengine: Running report 'SeasonsReport'
+2024-03-04T18:25:21.436577-08:00 pi4jr weewxd[3185]: DEBUG weewx.reportengine: Found configuration file /etc/weewx/skins/Seasons/skin.conf for report 'SeasonsReport'
+2024-03-04T18:25:21.450740-08:00 pi4jr weewxd[3185]: DEBUG weewx.reportengine: Running generators for report 'SeasonsReport' in directory '/etc/weewx/skins/Seasons'
+2024-03-04T18:25:21.526966-08:00 pi4jr weewxd[3185]: DEBUG weewx.cheetahgenerator: Using search list ['weewx.cheetahgenerator.Almanac', 'weewx.cheetahgenerator.Current', 'weewx.cheetahgenerator.DisplayOptions', 'weewx.cheetahgenerator.Extras', 'weewx.cheetahgenerator.Gettext', 'weewx.cheetahgenerator.JSONHelpers', 'weewx.cheetahgenerator.PlotInfo', 'weewx.cheetahgenerator.SkinInfo', 'weewx.cheetahgenerator.Station', 'weewx.cheetahgenerator.Stats', 'weewx.cheetahgenerator.UnitInfo']
+2024-03-04T18:25:21.535681-08:00 pi4jr weewxd[3185]: DEBUG weewx.manager: Daily summary version is 4.0
+2024-03-04T18:25:23.735621-08:00 pi4jr weewxd[3185]: INFO weewx.cheetahgenerator: Generated 8 files for report SeasonsReport in 2.22 seconds
+2024-03-04T18:25:23.801097-08:00 pi4jr weewxd[3185]: DEBUG weewx.manager: Daily summary version is 4.0
+2024-03-04T18:25:24.484282-08:00 pi4jr weewxd[3185]: INFO weewx.imagegenerator: Generated 20 images for report SeasonsReport in 0.69 seconds
+2024-03-04T18:25:24.490385-08:00 pi4jr weewxd[3185]: INFO weewx.reportengine: Copied 5 files to /var/www/html/weewx
+
+#-----------------------------------------------------------
+# looks good - no extraneous debugging messages
+# lets check the data is there....
+#-----------------------------------------------------------
+
+$ echo "select datetime(dateTime,'unixepoch','localtime'),dateTime,soilMoist1,outTemp,extraTemp1,extraTemp2,extraTemp3,extraTemp4,extraTemp5 from archive order by rowid desc limit 1;" | sqlite3 /var/lib/weewx/weewx.sdb
+2024-03-04 18:20:00|1709605200|38.0|40.82|69.62||70.16|70.448|42.044
+
+#-----------------------------------------------------------
+# perfect - expected data is in the db
+#
+# done - release the victory beers !!!
+#-----------------------------------------------------------
+
+
+
+
