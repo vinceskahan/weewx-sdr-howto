@@ -7,6 +7,14 @@ sudo apt-get install -y sqlite3
 
 #-----------------------------------------------------------
 # install weewx per the debian weewx 5.0 quickstart
+#
+# this example installs weewx only via dpkg but you could
+# alternately install via pip if you follow the quickstart
+# for that method
+#
+# we do not install a webserver nor connect weewx to a
+# webserver in this howto, as it is not necessary in order
+# to get the weewx SDR driver to function
 #-----------------------------------------------------------
 
 sudo apt install -y wget gnupg
@@ -27,6 +35,9 @@ weewx     1657  0.6  0.5  31044 22464 ?        Ss   16:35   0:00 python3 /usr/sh
 
 #-----------------------------------------------------------
 # install and configure rsyslog
+#
+# this is recommended since it makes it 'much' easier
+# to find and understand your logfile entries
 #-----------------------------------------------------------
 
 sudo apt-get install -y rsyslog
@@ -114,6 +125,11 @@ Reattached kernel driver
 #  - and run for 120 seconds because we know that they
 #       transmit approximately every minute so run through
 #       hopefully two cycles of each sensor reporting
+#
+# your precise output will differ from this example but
+# should notionally be very similar.  Assuming you are
+# listening on the correct frequency you should see
+# whatever your sensors return as output
 #-----------------------------------------------------------
 
 pi@pi4jr:~ $ rtl_433 -f 915M -F json -T 120
@@ -202,6 +218,11 @@ Saved old configuration file as /etc/weewx/weewx.conf.20240304170426
 # the driver is installed but unconfigured, so edit the
 # weewx.conf file mentioned above.  We used the dpkg
 # installer so this requires sudo
+#
+# for now we'll listen using the same commands we used above
+# and tell the driver to syslog any drivers that are
+# not known to the driver, as well as any known sensors
+# that we have not yet mapped to weewx db elements
 #-----------------------------------------------------------
 sudo vi /etc/weewx.con
 
@@ -348,6 +369,15 @@ weewx     2700 15.5  0.2  58716  8620 ?        Rl   17:18   0:09 rtl_433 -f 915M
 #           weewx is running as is the rtl_433 process.
 #
 # time to see if it's working....
+#
+# we expect to see unmapped sensor readings since we have
+# not mapped anything to weewx db elements
+#
+# depending on your hardware, you might (or might not)
+# see unknown model messages followed by the data
+# the sensor is returning to the driver
+#
+# in this example, we have some of each message
 #-----------------------------------------------------------
 
 $ tail -n 200 /var/log/weewx/weewx.log
@@ -619,7 +649,12 @@ $ tail -n 200 /var/log/weewx/weewx.log
 # close....very close....but we're seeing duplicate packets
 # and the logging is a little too verbose
 #
-# Lets patch sdr.py and edit weewx.conf to cause
+# while setting debug=0 would turn these noise messages
+# off, we tend to run debug=1 here so it is necessary to
+# patch sdr.py lightly to make its logging a bit more
+# configurable
+#
+# we next patch sdr.py and edit weewx.conf to cause
 # the driver to not log the duplicate packets and
 # also not log the assembled packets it calculated
 #-----------------------------------------------------------
@@ -735,7 +770,4 @@ $ echo "select datetime(dateTime,'unixepoch','localtime'),dateTime,soilMoist1,ou
 #
 # done - release the victory beers !!!
 #-----------------------------------------------------------
-
-
-
 
